@@ -75,7 +75,6 @@ export default {
     // const menus = computed(() => store.getters.menus);
     // const menus = constantRoutes;
     const menus = store.getters.addRoutes;
-    console.log(menus,router.getRoutes())
     const selectedKeys = ref(["1"]);
     const clickMenuItem = (key, path) => {
       if (router.hasRoute(key)) {
