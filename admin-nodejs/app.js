@@ -19,7 +19,7 @@ const moment = require('moment');
 const logger = require('./common/logger');
 const requestLog = require('./middleware/requestLog');
 const router = require('./router');
-
+const { createProxyMiddleware } = require('http-proxy-middleware')
 const app = express();
 // view engine setup
 // app.engine('ejs', require('ejs-mate'));
@@ -57,7 +57,9 @@ app.use((req, res, next) => {
   res.locals.site = config.site;
   next();
 });
-
+app.use('/geoserver',createProxyMiddleware({
+  target: "http://localhost:8080"
+}))
 // routes
 app.use('/api', router);
 

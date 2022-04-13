@@ -26,49 +26,122 @@ import VectorSource from "ol/source/Vector";
 import GeoJSON from "ol/format/GeoJSON";
 import { Fill, Style, Circle, Text } from "ol/style";
 import { defaults as defaultControls } from "ol/control";
-import { LegendControl } from "./LegendControl";
-const gldLegend = {
-  fill: {
-    "小于4.5": "#FF0000",
-    "4.5-5.0": "#FC6900", // >=4.5 && <5.0
-    "5.0-5.5": "#FCAB00",
-    "5.5-6.0": "#F5F500",
-    "6.0-6.5": "#BAF700",
-    "6.5-7.0": "#81F819",
-    ">=7.0": "#10F500",
-  },
-};
-const xzqLegend = {
-  border: {
-    市: "#1C9E78",
-    县: "#D95F02", // >=4.5 && <5.0
-    乡: "#7F7AB9",
-  }
-};
+import { LegendControl, getSldXml } from "./LegendControl";
+// import { getSld } from "@/api/geoApi";
+// const gldLegend = {
+//   fill: {
+//     "小于4.5": "#FF0000",
+//     "4.5-5.0": "#FC6900", // >=4.5 && <5.0
+//     "5.0-5.5": "#FCAB00",
+//     "5.5-6.0": "#F5F500",
+//     "6.0-6.5": "#BAF700",
+//     "6.5-7.0": "#81F819",
+//     ">=7.0": "#10F500",
+//   },
+// };
+// const xzqLegend = {
+//   border: {
+//     市: "#1C9E78",
+//     县: "#D95F02", // >=4.5 && <5.0
+//     乡: "#7F7AB9",
+//   },
+//   fill: {
+//     市: "#1C9E78",
+//     县: "#D95F02", // >=4.5 && <5.0
+//     乡: "#7F7AB9",
+//   },
+// };
 export default defineComponent({
   setup() {
     const state = reactive({
       test: null as unknown,
       scale: 0,
       graphicUrl: "",
+      legendObj: {}, // gld
+      xzqLegendObj: {},
       // map: null as Map
     });
     const map = ref();
 
     const getPointFillColor = (num) => {
-      if (num >= 7.0) return gldLegend.fill[">=7.0"];
-      else if (num >= 6.5) return gldLegend.fill["6.5-7.0"];
-      else if (num >= 6.0) return gldLegend.fill["6.0-6.5"];
-      else if (num >= 5.5) return gldLegend.fill["5.5-6.0"];
-      else if (num >= 5.0) return gldLegend.fill["5.0-5.5"];
-      else if (num >= 4.5) return gldLegend.fill["4.5-5.0"];
-      else return gldLegend.fill["小于4.5"];
+      let color =
+        state.legendObj["point"][state.legendObj["point"].length - 1].fill;
+      for (let item of state.legendObj["point"]) {
+        let numStr = item.name.match(/\d+\.\d+/)[0];
+        if (num >= parseFloat(numStr)) {
+          color = item.fill;
+          break;
+        }
+      }
+      return color;
     };
+    // const getSldXml = async (url, cb) => {
+    //   let data = await getSld(url);
+    //   let legendObj = {};
+    //   let result = data.replaceAll("sld:", "");
+    //   const xmlStyle = new DOMParser().parseFromString(result, "text/xml");
+    //   const userStyleDom = xmlStyle.getElementsByTagName("UserStyle").item(0);
+    //   const featureTypeStyleDom =
+    //     userStyleDom?.getElementsByTagName("FeatureTypeStyle");
+    //   for (let i = 0, l = featureTypeStyleDom?.length || 0; i < l; i++) {
+    //     let rulesDom = featureTypeStyleDom
+    //       ?.item(i)
+    //       ?.getElementsByTagName("Rule");
+    //     for (let q = 0, rl = rulesDom?.length || 0; q < rl; q++) {
+    //       const name = rulesDom
+    //         ?.item(q)
+    //         ?.getElementsByTagName("Name")
+    //         .item(0)?.innerHTML;
+    //       const pointBl = rulesDom
+    //         ?.item(q)
+    //         ?.getElementsByTagName("PointSymbolizer");
+    //       let type = "";
+    //       if (pointBl && pointBl.length > 0) type = "point";
+    //       else {
+    //         const lineBl = rulesDom
+    //           ?.item(q)
+    //           ?.getElementsByTagName("LineSymbolizer");
+    //         if (lineBl && lineBl.length > 0) type = "line";
+    //         else {
+    //           const polygonBl = rulesDom
+    //             ?.item(q)
+    //             ?.getElementsByTagName("PolygonSymbolizer");
+    //           if (polygonBl && polygonBl.length > 0) type = "polygon";
+    //           else break;
+    //         }
+    //       }
+    //       const fillDom = rulesDom?.item(q)?.getElementsByTagName("Fill");
+    //       const strokeDom = rulesDom?.item(q)?.getElementsByTagName("Stroke");
+    //       legendObj[type] = legendObj[type] || [];
+    //       // 填充
+    //       let cssDoms = fillDom?.item(0)?.children || [];
+    //       const nameObj = { name: name };
+    //       for (let cssDom of cssDoms) {
+    //         if (cssDom.getAttribute("name") === "fill") {
+    //           nameObj["fill"] = cssDom.innerHTML;
+    //           break;
+    //         }
+    //       }
+    //       // 线条
+    //       cssDoms = strokeDom?.item(0)?.children || [];
+    //       for (let cssDom of cssDoms) {
+    //         if (cssDom.getAttribute("name") === "stoke") {
+    //           nameObj["stoke"] = cssDom.innerHTML;
+    //           break;
+    //         }
+    //       }
+    //       legendObj[type].push(nameObj);
+    //     }
+    //   }
+    //   cb(legendObj);
+    //   console.log(legendObj, "xmlStyle", xmlStyle);
+    // };
+    // getSldXml("/test/styles/gld.sld", (v) => (state.legendObj = v));
 
     const newMap = () => {
       const untiled = new Image({
         visible: true,
-        properties: { name: "江西省行政区" },
+        properties: { name: "行政区" },
         source: new ImageWMS({
           url: "http://localhost:8080/geoserver/test/wms",
           params: {
@@ -105,21 +178,17 @@ export default defineComponent({
           return style;
         },
       });
-      pointVector.on("postrender", (event) => {
-        console.log(event);
-        // const vectorContext = getVectorContext(event);
-        // !是not null的断言操作 不执行运行时检查，告诉编译器只需要知道这个东西
-        // const features = pointVector.getSource()!.getFeatures();
-        // console.log("features pointRes", features, pointRes);
-      });
+      // pointVector.on("postrender", (event) => {
+      //   console.log(event);
+      // });
 
       map.value = new Map({
         target: "map",
         controls: defaultControls().extend([
           new LegendControl(
             [
-              { layer: pointVector, type: "point", legendConfig: gldLegend },
-              { layer: untiled, type: "polygon", legendConfig: xzqLegend },
+              { layer: pointVector, legendConfig: state.legendObj },
+              { layer: untiled, legendConfig: state.xzqLegendObj },
             ],
             {
               element: document.getElementById("legend"),
@@ -146,8 +215,12 @@ export default defineComponent({
         state.scale = Math.round(scale);
       });
     };
+    getSldXml("/test/styles/shi.sld", (v) => (state.xzqLegendObj = v));
     onMounted(() => {
-      newMap();
+      getSldXml("/test/styles/gld.sld", (v) => {
+        state.legendObj = v;
+        newMap();
+      });
     });
 
     return {
@@ -169,6 +242,7 @@ export default defineComponent({
   bottom: 10px;
   width: 200px;
   max-height: 700px;
+  overflow-y: scroll;
   z-index: 10;
   background: rgba(65, 184, 131, 0.5);
   box-sizing: border-box;
@@ -193,5 +267,11 @@ export default defineComponent({
       }
     }
   }
+}
+::-webkit-scrollbar {
+  /*滚动条整体样式*/
+  width: 0px;
+  /*高宽分别对应横竖滚动条的尺寸*/
+  // height: 1px;
 }
 </style>

@@ -38,6 +38,9 @@ module.exports = {
                 // pathRewrite: {
                 //     '^/api': ''
                 // }
+            },
+            '/geoserver': {
+                target: 'http://localhost:9001/',
             }
         }
     }
