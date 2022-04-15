@@ -25,8 +25,10 @@ import VectorSource from "ol/source/Vector";
 // import KML from "ol/format/KML";
 import GeoJSON from "ol/format/GeoJSON";
 import { Fill, Style, Circle, Text } from "ol/style";
+import { getVectorContext } from "ol/render";
 import { defaults as defaultControls } from "ol/control";
-import { LegendControl, getSldXml } from "./LegendControl";
+import { LegendControl, getSldXml, transformColor } from "./LegendControl";
+// import Extent from 'ol/extent'
 // import { getSld } from "@/api/geoApi";
 // const gldLegend = {
 //   fill: {
@@ -59,10 +61,11 @@ export default defineComponent({
       graphicUrl: "",
       legendObj: {}, // gld
       xzqLegendObj: {},
-      // map: null as Map
+      map: null as any,
+      start: 0,
     });
     const map = ref();
-
+    let scale = 0.02;
     const getPointFillColor = (num) => {
       let color =
         state.legendObj["point"][state.legendObj["point"].length - 1].fill;
@@ -149,16 +152,33 @@ export default defineComponent({
           },
         }),
       });
+      const pointSource = new VectorSource({
+        url: "http://localhost:8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application/json&typeName=test:2018gld",
+        format: new GeoJSON(),
+      });
       const pointVector = new VectorLayer({
         visible: true,
         properties: { name: "过录点" },
-        source: new VectorSource({
-          url: "http://localhost:8080/geoserver/test/ows?service=WFS&version=1.0.0&request=GetFeature&outputFormat=application/json&typeName=test:2018gld",
-          format: new GeoJSON(),
-        }),
+        source: pointSource,
         style: function (feature) {
+          console.log(feature.getGeometry());
           const ph = feature.get("土壤ph");
 
+          const style = new Style({
+            text: new Text({
+              offsetY: 10,
+              font: "16px '宋体'",
+              text:
+                state.scale < 172000 ? "ph:" + Math.round(ph * 100) / 100 : "",
+            }),
+          });
+          return style;
+        },
+      });
+      pointSource.on("featuresloadend", (features) => {
+        if (!features.features) return;
+        for (let feature of features.features) {
+          const ph = feature.get("土壤ph");
           const style = new Style({
             image: new Circle({
               fill: new Fill({
@@ -167,22 +187,13 @@ export default defineComponent({
               // scale: Math.random(),
               radius: 4,
             }),
-            text: new Text({
-              offsetY: 10,
-              font: "16px '宋体'",
-              text:
-                state.scale < 172000 ? "ph:" + Math.round(ph * 100) / 100 : "",
-            }),
           });
-
-          return style;
-        },
+          feature.setStyle(style);
+        }
       });
-      // pointVector.on("postrender", (event) => {
-      //   console.log(event);
-      // });
+      // const duration = 3000
 
-      map.value = new Map({
+      state.map = new Map({
         target: "map",
         controls: defaultControls().extend([
           new LegendControl(
@@ -206,7 +217,45 @@ export default defineComponent({
           zoom: 7,
         }),
       });
-      map.value.on("postrender", (mapRes) => {
+
+      const animate = (event) => {
+        if (state.scale > 108216) return;
+        if (scale >= 1) {
+            scale = 0.02;
+        }
+        const extent = event.frameState.extent;
+        const features = event.target.getSource()?.getFeaturesInExtent(extent);
+        const vectorContext = getVectorContext(event);
+        // const elapsed = event.frameState.time - state.start;
+        for (let feature of features) {
+          // const random = Math.random();
+          const color = feature.getStyle().getImage().getFill().getColor();
+          const colorstr = transformColor(color);
+
+          const style = new Style({
+            image: new Circle({
+              radius: 20,
+              scale: scale,
+              fill: new Fill({
+                color: "rgba(" + colorstr + (1 - scale) + ")",
+              }),
+            }),
+          });
+          vectorContext.setStyle(style);
+          vectorContext.drawGeometry(feature.getGeometry().clone());
+        }
+        state.map.render();
+        scale = scale + 0.01
+        // state.start = Date.now();
+      };
+      // pointVector.on("change:extent", (e) => {
+      //   console.log("extent", e);
+      // });
+      pointVector.on("postrender", animate);
+      // state.map.getView().on("change:resolution", (e) => {
+      //   console.log("size",e.target.getState(),e.target.getProjection().getExtent(),e);
+      // });
+      state.map.on("postrender", (mapRes) => {
         const resolution = mapRes.frameState.viewState.resolution;
         const units = mapRes.frameState.viewState.projection.getUnits();
         const dpi = 25.4 / 0.28;

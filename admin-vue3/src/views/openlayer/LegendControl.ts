@@ -205,3 +205,26 @@ export async function getSldXml(url, cb) {
     }
     cb(legendObj);
 }
+// 十六进制转rgba
+export function transformColor(color: string) {
+    let thecolor = color.toLowerCase();
+    //十六进制颜色值的正则表达式
+    const r = /^#([0-9a-fA-f]{3}|[0-9a-fA-f]{6})$/;
+    // 如果是16进制颜色
+    if (thecolor && r.test(thecolor)) {
+        if (thecolor.length === 4) {
+            let sColorNew = "#";
+            for (let i = 1; i < 4; i += 1) {
+                sColorNew += thecolor.slice(i, i + 1).concat(thecolor.slice(i, i + 1));
+            }
+            thecolor = sColorNew;
+        }
+        //处理六位的颜色值
+        const sColorChange: number[] = [];
+        for (let i = 1; i < 7; i += 2) {
+            sColorChange.push(parseInt("0x" + thecolor.slice(i, i + 2)));
+        }
+        return sColorChange.join(",") + ',';
+    }
+    return thecolor;
+}
