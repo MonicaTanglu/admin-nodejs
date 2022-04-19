@@ -1,6 +1,6 @@
 import {
     Form, Input, DatePicker, Switch, Checkbox, Radio, Button, Layout, Menu, Row, Col,
-    Dropdown, Avatar, Tabs, Table, Alert, Card, List,
+    Dropdown, Avatar, Tabs, Table, Alert, Card, List,Cascader,
     Pagination, Divider, Modal, Select, Popconfirm, Drawer, Spin, InputNumber, AutoComplete,
     TreeSelect, Tree
 } from 'ant-design-vue';
@@ -25,6 +25,7 @@ const components = [
     Alert,
     Card,
     List,
+    Cascader,
     Pagination,
     Divider,
     Modal,

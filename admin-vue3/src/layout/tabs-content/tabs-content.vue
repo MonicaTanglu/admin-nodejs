@@ -99,7 +99,7 @@ export default {
 <style lang='less' scoped>
 .tabs-content {
   border-top: 1px solid #eee;
-  :v-deep(.ant-tabs) {
+  ::v-deep .ant-tabs {
     // .ant-tabs-bar {
     //   padding: 4px 20px 0 10px;
     //   margin: 0;
@@ -107,6 +107,7 @@ export default {
     //   user-select: none;
     //   border-width: 0px !important;
     // }
+    margin: 4px 16px 0 16px;
     .ant-tabs-tab {
       border-width: 0px !important;
       background: #fff !important;
@@ -115,8 +116,8 @@ export default {
       border-bottom: 2px solid var(--primary-6) !important;
     }
     .ant-tabs-nav {
-      padding-left: 16px;
-      margin: 0 0 1px 0;
+      // padding-left: 16px;
+      margin: 0 0 1px;
     }
     .ant-tabs-tabpane {
       display: none;

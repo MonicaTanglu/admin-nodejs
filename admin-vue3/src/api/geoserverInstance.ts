@@ -131,9 +131,9 @@ const err = (error) => {
 //     else return false
 // }, err)
 
-const request = async (config: AxiosRequestConfig): Promise<string> => {
+const request = async (config: AxiosRequestConfig): Promise<any> => {
     return new Promise((resolve) => {
-        service.request(config).then((res: AxiosResponse<string>) => {
+        service.request(config).then((res: AxiosResponse<any>) => {
             // removePending(config)
             resolve(res.data)
             if (res.data) {

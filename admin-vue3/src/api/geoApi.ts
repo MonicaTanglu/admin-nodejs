@@ -6,3 +6,13 @@ export function getSld(url) {
         headers: {"Content-Type": "application/vnd.ogc.sld+xml"}
     })
 }
+export function geoQueryPost(url, params = {}) {
+    return request({
+        url: url,
+        method: "post",
+        headers: {
+            'Content-Type': 'text/plain;charset=UTF-8',  // 文件上传
+        },
+        data: params
+    })
+}
