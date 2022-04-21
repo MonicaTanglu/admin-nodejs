@@ -9,6 +9,21 @@
         ></a-cascader>
         <a-button class="m-l-10" @click="search">查询</a-button>
       </span>
+
+      <label class="m-l-20 measure">
+        <span
+          class="measure-item"
+          :class="{ 'measure-active': ruleType === 'line' }"
+          @click="setRule('line')"
+          ><icon-font type="icon--Ruler"></icon-font
+        ></span>
+        <span
+          class="m-l-10 measure-item"
+          :class="{ 'measure-active': ruleType === 'area' }"
+          @click="setRule('area')"
+          ><icon-font type="icon-rule-area"></icon-font
+        ></span>
+      </label>
       <label id="scale" style="float: right">1:{{ scale }}</label>
     </p>
     <div id="map" ref="map" class="map">
@@ -40,19 +55,28 @@
 <script lang="ts">
 import "ol/ol.css";
 import { defineComponent, reactive, toRefs, ref, onMounted } from "vue";
-import { Feature, Map, View } from "ol";
+import { Feature, Map, Overlay, View } from "ol";
 import { Projection, METERS_PER_UNIT } from "ol/proj";
-import ImageWMS from "ol/source/ImageWMS";
-import Image from "ol/layer/Image";
-import VectorLayer from "ol/layer/Vector";
-import VectorSource from "ol/source/Vector";
+import { ImageWMS, Vector as VectorSource } from "ol/source";
+import { Image, Vector as VectorLayer } from "ol/layer";
 import { GeoJSON, WFS } from "ol/format";
 import { Fill, Style, Circle, Text, Stroke } from "ol/style";
 import { getVectorContext } from "ol/render";
 import { defaults as defaultControls } from "ol/control";
-import { LegendControl, getSldXml, transformColor } from "./LegendControl";
 import { equalTo } from "ol/format/filter";
+import { Draw } from "ol/interaction";
+import { getArea, getLength } from "ol/sphere";
+
+import {
+  LegendControl,
+  getSldXml,
+  transformColor,
+  MeasureStyle,
+} from "./LegendControl";
+
 import { geoQueryPost } from "@/api/geoApi";
+import { LineString, Polygon } from "ol/geom";
+import { unByKey } from "ol/Observable";
 const options = [
   {
     value: "上饶市",
@@ -171,11 +195,6 @@ export default defineComponent({
               color: "rgba(" + colorstr + (1 - scale) + ")",
             }),
           }),
-          text: new Text({
-            offsetY: 10,
-            font: "16px '宋体'",
-            text: "ph:" + Math.round(feature.get("土壤ph") * 100) / 100,
-          }),
         });
         vectorContext.setStyle(style);
         vectorContext.drawGeometry(feature.getGeometry().clone());
@@ -217,6 +236,7 @@ export default defineComponent({
       stateTable.tables = [];
       stateTable.tableIndex = 1;
       for (let feature of features) {
+        if (!feature.id_) continue;
         const tableName = feature.id_.split(".")[0];
         let obj: TableObj = { tableName: tableName, tableData: [] };
         const keys = feature.getKeys();
@@ -240,6 +260,16 @@ export default defineComponent({
       else ++stateTable.tableIndex;
     };
 
+    const drawSource = new VectorSource();
+    const measureVectorLayer = new VectorLayer({
+      source: drawSource,
+      style: new Style({
+        stroke: new Stroke({
+          color: "#ffcc33",
+          width: 2,
+        }),
+      }),
+    });
     const newMap = () => {
       const untiled = new Image({
         visible: true,
@@ -265,7 +295,8 @@ export default defineComponent({
             }
           ),
         ]),
-        layers: [untiled, pointVector],
+        layers: [untiled, pointVector, measureVectorLayer],
+        // layers: [untiled, measureVectorLayer],
         view: new View({
           projection: new Projection({
             code: "EPSG:4527",
@@ -322,12 +353,122 @@ export default defineComponent({
       );
     };
 
+    // 测量
+    const ruleType = ref(null);
+    let helpTooltipElement: HTMLElement | null;
+    let measureTooltipElement: HTMLElement | null;
+    let helpTooltip: Overlay, measureTooltip: Overlay;
+    let sketch: Feature | null;
+    let draw = ref();
+    const createMeasureDom = () => {
+      helpTooltipElement = document.createElement("div");
+      helpTooltipElement.className = "ol-tooltip hidden";
+      helpTooltip = new Overlay({
+        element: helpTooltipElement,
+        offset: [15, 0],
+        positioning: "center-left",
+      });
+      measureTooltipElement = document.createElement("div");
+      measureTooltipElement.className = "ol-tooltip ol-tooltip-measure";
+      measureTooltip = new Overlay({
+        element: measureTooltipElement,
+        offset: [0, -15],
+        positioning: "bottom-center",
+        stopEvent: false,
+        insertFirst: false,
+      });
+      state.map.addOverlay(measureTooltip);
+      state.map.addOverlay(helpTooltip);
+    };
+    const formatLength = (line) => {
+      const length = getLength(line);
+      let output;
+      if (length > 100)
+        output = Math.round((length / 1000) * 100) / 100 + " km";
+      else output = Math.round(length * 100) / 100 + " m";
+      return output;
+    };
+    const formatArea = (polygon) => {
+      const area = getArea(polygon);
+      let output;
+      if (area > 10000)
+        output = Math.round((area / 1000000) * 100) / 100 + " km<sup>2</sup>";
+      else output = Math.round(area * 100) / 100 + " m<sup>2</sup>";
+      return output;
+    };
+    let listener;
+    const drawStart = (evt) => {
+      sketch = evt.feature;
+      drawSource.clear();
+      let tooltipCoord;
+      if (!sketch) return;
+      listener = sketch.getGeometry()?.on("change", (sevt) => {
+        const geom = sevt.target;
+        let output;
+        if (geom instanceof Polygon) {
+          output = formatArea(geom);
+          tooltipCoord = geom.getInteriorPoint().getCoordinates();
+        } else if (geom instanceof LineString) {
+          output = formatLength(geom);
+          tooltipCoord = geom.getLastCoordinate();
+        }
+        measureTooltipElement!.innerHTML = output;
+        measureTooltip.setPosition(tooltipCoord);
+      });
+    };
+    const drawEnd = () => {
+      measureTooltipElement!.className = "ol-tooltip ol-tooltip-static";
+      measureTooltip.setOffset([0, -7]);
+      sketch = null;
+      unByKey(listener);
+    };
+    const addInteraction = (ruleType) => {
+      const type = ruleType === "line" ? "LineString" : "Polygon";
+      draw.value = new Draw({
+        source: drawSource,
+        type: type,
+        style: MeasureStyle,
+      });
+      state.map.addInteraction(draw.value);
+      draw.value.on("drawstart", drawStart);
+      draw.value.on("drawend", drawEnd);
+    };
+    const setRule = (type) => {
+      state.map.removeInteraction(draw.value);
+      if (ruleType.value === type) {
+        ruleType.value = null;
+        return;
+      } else ruleType.value = type;
+      addInteraction(type);
+    };
+    const pointerMoveHandle = (evt) => {
+      if (evt.dragging || !ruleType.value) {
+        helpTooltipElement!.classList.add("hidden");
+        return;
+      }
+      let helpMsg = "点击开始测量";
+      if (sketch) {
+        helpMsg = "点击继续画";
+      }
+      helpTooltipElement!.innerHTML = helpMsg;
+      helpTooltip.setPosition(evt.coordinate);
+      helpTooltipElement!.classList.remove("hidden");
+    };
+    const listenHandle = () => {
+      state.map.getView().addEventListener("mouseout", () => {
+        helpTooltipElement!.classList.add("hidden");
+      });
+      state.map.on("pointermove", pointerMoveHandle);
+    };
+
     onMounted(() => {
       getSldXml("/test/styles/gld.sld", (v) => {
         state.legendObj = v;
         newMap();
         state.map.addLayer(queryLayer);
         state.map.addLayer(highlightLayer);
+        createMeasureDom();
+        listenHandle();
       });
     });
 
@@ -335,9 +476,11 @@ export default defineComponent({
       ...toRefs(state),
       ...toRefs(stateTable),
       map,
+      ruleType,
       search,
       preTable,
       nextTable,
+      setRule,
     };
   },
 });
@@ -348,6 +491,7 @@ export default defineComponent({
   height: 700px;
   position: relative;
 }
+// 图例样式
 .legend {
   position: absolute;
   right: 10px;
@@ -380,7 +524,7 @@ export default defineComponent({
     }
   }
 }
-
+// 属性提示框
 .pop-table {
   position: absolute;
   z-index: 12;
@@ -416,10 +560,64 @@ export default defineComponent({
     }
   }
 }
+
 ::-webkit-scrollbar {
   /*滚动条整体样式*/
   width: 0px;
   /*高宽分别对应横竖滚动条的尺寸*/
   // height: 1px;
+}
+
+// 测量样式
+.measure {
+  &-item {
+    margin: 0 10px;
+    padding: 0 4px;
+    height: 30px;
+    line-height: 30px;
+    font-size: 20px;
+    color: #333;
+    cursor: pointer;
+  }
+  .measure-active {
+    background: rgba(51, 51, 51, 0.5);
+  }
+}
+.ol-tooltip {
+  position: relative;
+  border-radius: 4px;
+  padding: 4px 8px;
+  opacity: 0.7;
+  white-space: nowrap;
+  font-size: 12px;
+  user-select: none;
+}
+.ol-tooltip.hidden {
+  display: none;
+}
+.ol-tooltip-measure {
+  opacity: 1;
+  font-weight: bold;
+}
+.ol-tooltip-static {
+  // 提示框
+  background-color: #ffcc33;
+  color: black;
+  border: 1px solid white;
+}
+.ol-tooltip-measure:before,
+// 三角形
+.ol-tooltip-static:before {
+  border-top: 6px solid rgba(0, 0, 0, 0.5);
+  border-right: 6px solid transparent;
+  border-left: 6px solid transparent;
+  content: "";
+  position: absolute;
+  bottom: -6px;
+  margin-left: -7px;
+  left: 50%;
+}
+.ol-tooltip-static:before {
+  border-top-color: #ffcc33;
 }
 </style>
