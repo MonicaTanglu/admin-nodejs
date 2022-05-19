@@ -3,7 +3,7 @@ const path = require('path')
 function resolve (dir) {
     return path.join(__dirname, dir)
 }
-
+let cesiumSource = './node_modules/cesium/Source'
 module.exports = {
     publicPath: '/',
     productionSourceMap: false,
@@ -16,6 +16,7 @@ module.exports = {
     chainWebpack: (config) => {
         config.resolve.alias
             .set('@', resolve('src'))
+            .set('cesium', resolve(__dirname, cesiumSource))
         config.resolve.extensions.add('ts').add('tsx')
     },
     css: {
