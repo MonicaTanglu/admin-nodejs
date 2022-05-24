@@ -99,7 +99,7 @@ export default {
 <style lang='less' scoped>
 .tabs-content {
   border-top: 1px solid #eee;
-  ::v-deep .ant-tabs {
+  :deep .ant-tabs {
     // .ant-tabs-bar {
     //   padding: 4px 20px 0 10px;
     //   margin: 0;

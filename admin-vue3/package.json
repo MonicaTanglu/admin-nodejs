@@ -9,6 +9,8 @@
   },
   "dependencies": {
     "@ant-design/icons-vue": "^5.1.9",
+    "@open-wc/webpack-import-meta-loader": "^0.4.7",
+    "@types/cesium": "^1.70.0",
     "ant-design-vue": "3.0.0-beta.8",
     "axios": "^0.21.1",
     "cesium": "^1.93.0",

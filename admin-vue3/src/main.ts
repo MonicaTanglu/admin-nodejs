@@ -11,6 +11,9 @@ import { createRouterGuards } from './permission'
 
 import IconFont from "@/components/iconfont/icon";
 
+// import "cesium/Build/Cesium/Widgets/";
+
+
 
 const app = createApp(App)
 app.config.globalProperties.$filters = filters
