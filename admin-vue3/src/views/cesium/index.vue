@@ -1,22 +1,28 @@
 <template>
-  <div id="container"></div>
+  <div>
+    <cesium-com></cesium-com>
+  </div>
 </template>
 <script lang="ts">
-import "_CES/Widgets/widgets.css";
-// @ts-ignore
-// import * as Cesium from "_CES/Cesium";
-// const Cesium = require("_CES/Cesium");
-import * as Cesium from "cesium";
+// import * as Cesium from "cesium";
+// import { onMounted } from "vue";
+// import { Options, Vue } from 'vue-class-component';
+import CesiumCom from './CesiumCom.vue'
+// @Options({
+//   components: {
+//     CesiumCom
+//   }
+// })
+// export default class Cesium extends Vue {
 
+// }
 export default {
-  name: 'HelloCesium',
-  mounted () {
-    new Cesium.Viewer('container');
-  }
-}
+  components: {
+    CesiumCom
+  },
+};
 </script>
 <style scoped lang="less">
-// @import  "~cesium/Build/Cesium/Widgets/widgets.css";
 #container {
   width: 100%;
   height: 100%;

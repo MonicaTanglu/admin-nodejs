@@ -6,24 +6,20 @@
     "jsx": "preserve",
     "importHelpers": true,
     "moduleResolution": "node",
+    "experimentalDecorators": true,
     "skipLibCheck": true,
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "experimentalDecorators": true,
     "sourceMap": true,
     "pretty": true,
     "resolveJsonModule": true,
-    "allowJs": true,
-    "checkJs": true,
-    "suppressImplicitAnyIndexErrors": true,
     "strictPropertyInitialization": false,
-    "downlevelIteration": true,
-    "noUnusedLocals": false,
     "noImplicitAny": false,
-    "noImplicitThis": true,
-    "removeComments": false,
     "strictFunctionTypes": false,
     "baseUrl": ".",
+    "types": [
+      "webpack-env"
+    ],
     "paths": {
       "@/*": [
         "src/*"
@@ -41,7 +37,8 @@
     "src/**/*.tsx",
     "src/**/*.vue",
     "tests/**/*.ts",
-    "tests/**/*.tsx"],
+    "tests/**/*.tsx"
+  ],
   "exclude": [
     "node_modules"
   ]

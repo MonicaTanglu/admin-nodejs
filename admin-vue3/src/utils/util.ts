@@ -22,6 +22,7 @@ export class Util {
         const routers: MenuObject[] = [];
         for (const item of data) {
             let component = "";
+            console.log('aaa')
             if (item.component) {
                 if (item.component && item.component.indexOf("layout") >= 0) {
                     component = item.component;
@@ -29,12 +30,6 @@ export class Util {
                     component = "views/" + item.component;
                 }
             }
-
-            // eslint-disable-next-line
-            // let URL = (item.meta.url || '').replace(/{{([^}}]+)?}}/g, (s1, s2) => eval(s2)) // URL支持{{ window.xxx }}占位符变量
-            // if (this.isURL(URL)) {
-            //     item.meta.url = URL;
-            // }
             const componentPath = () => import('@/' + component + '.vue')
             const menu: MenuObject = {
                 path: item.page_url,

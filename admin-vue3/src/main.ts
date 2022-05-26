@@ -5,7 +5,7 @@ import router from './router/index';
 import { setupAntd } from './ant-design-vue';
 import store from './store/index';
 import './style/theme.less';
-import '../mock/mock'
+// import '../mock/mock'
 import filters from './utils/filters'
 import { createRouterGuards } from './permission'
 
