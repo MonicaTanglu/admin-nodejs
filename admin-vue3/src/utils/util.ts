@@ -22,7 +22,6 @@ export class Util {
         const routers: MenuObject[] = [];
         for (const item of data) {
             let component = "";
-            console.log('aaa')
             if (item.component) {
                 if (item.component && item.component.indexOf("layout") >= 0) {
                     component = item.component;
